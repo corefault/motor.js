@@ -1,3 +1,26 @@
+/**
+ * motor.js
+ * 
+ * simple and easy particle engine
+ * use at your own risk
+ * 
+ * @author Daniel Kagemann (@corefault)
+ * https://github.com/corefault/motor.js
+ * 
+ * if this seems useful for you please credit the author
+ * donations welcome (daniel@corefault.de)
+ * 
+ * changelog
+ * 
+ * v0.2
+ *   min/max values fix for invalid order
+ *   force can use a value or a function returning a value (can be used for complex calculations)
+ *   added timespan pulse feature for motor.initialize
+ *   
+ * v0.1
+ *   initial version
+ */
+
 /* ===================================================================================================================
  * motor
  ===================================================================================================================*/
@@ -7,6 +30,7 @@ function motor (id, isTrailing, spawnAfterDeath) {
    this.ctx = canvas.getContext('2d');
    this.useTrail = isTrailing || false;
    this.useReSpawn = spawnAfterDeath || true;
+   this.pulse = {cur:0, limit: 0};
    
    // make fullscreen
    canvas.width = window.innerWidth;
@@ -20,11 +44,16 @@ function motor (id, isTrailing, spawnAfterDeath) {
    this.force = {
       data: {},
       set: function (key, val) {
-        this.data[key] = val;
+         this.data[key] = val;
       },
-      apply: function(particle) {
+      apply: function(particle, dt) {
          for (var k in this.data) {
-            particle.props[k] += this.data[k];
+            // check for function
+            var val = this.data[k];
+            if (typeof val === "function") {
+               val = val();
+            }
+            particle.props[k] += val;
          }
          
          // check for death of particle
@@ -43,7 +72,13 @@ function motor (id, isTrailing, spawnAfterDeath) {
          return (Math.random()*(max-min))+min;
       },
       make: function (min,max) {
-        return {min: min, max:max}; 
+         
+         if (min > max) {
+            var tmp = min;
+            min = max;
+            max = tmp;
+         }
+         return {min: min, max:max}; 
       },
       set: function (key, min, max) {
         max = max || min;     // fallback to same vaue as min
@@ -67,10 +102,19 @@ motor.prototype.spawn = function() {
    }
    return p;
 };
-motor.prototype.initialize = function(num) {
-  for (var i = 0; i < num; i++) {
-     this.particles.push(this.spawn()); 
-  } 
+motor.prototype.initialize = function(num, timespan) {
+   timespan = timespan || 0;
+   
+   // if timespan is used it should be in seconds
+   if (timespan == 0) {
+      for (var i = 0; i < num; i++) {
+         this.particles.push(this.spawn()); 
+      } 
+   } else {
+      this.pulse = {cur: 0, limit: (timespan*60) / num};
+      // just spawn a single particle
+      this.particles.push(this.spawn());
+   }
 };
 motor.prototype.outOfBounds = function(particle) {
    if (particle.props.x < 0 || particle.props.x > this.width || 
@@ -87,6 +131,15 @@ motor.prototype.update = function() {
       this.ctx.clearRect(0,0, this.width, this.height);
    }
    
+   // check for pulse feature
+   if (this.pulse.limit != 0) {
+      this.pulse.cur++;
+      if (this.pulse.cur >= this.pulse.limit) {
+         this.particles.push(this.spawn());
+         this.pulse.cur = 0;
+      }
+   }
+   
    var dt = Date.now() - this.lastupdate;
    this.lastupdate = Date.now();
    
@@ -98,8 +151,7 @@ motor.prototype.update = function() {
          this.particles[i].render(this.ctx);
          this.particles[i].move(dt);
       
-         this.force.apply(this.particles[i]);
-         
+         this.force.apply(this.particles[i] , dt);
          this.outOfBounds(this.particles[i]);
       } else {
          if (this.useReSpawn) {
