@@ -1,4 +1,4 @@
-var mo = new motor("motor", false, true);
+var mo = new motor("motor", false, false);
 // motor:creator
 mo.creator.set("size", 1,2);
 mo.creator.set("color_r", 50);
@@ -12,15 +12,15 @@ mo.creator.set("life", 30,40);
 
 // mo::forces
 mo.force.set("life", -0.2);
-mo.force.set("size", 0.1);
+mo.force.set("size", 0.2);
 mo.force.set("color_alpha", -0.01);
-mo.force.set("vy", -2, -5);
+mo.force.set("vy", -4, -8);
 mo.force.set("vx", function() {
-   return mo.creator.rnd(-3, 3);
+   return mo.creator.rnd(-4, 4);
 });
 
 // initialize all
-mo.initialize(20, 1);
+mo.initialize(40, 1);
 
 function draw() {
   mo.update();

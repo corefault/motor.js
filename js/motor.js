@@ -11,6 +11,10 @@
  * donations welcome (daniel@corefault.de)
  * 
  * changelog
+ *
+ * v0.3
+ *   display number of particles as text
+ *   added bounding box
  * 
  * v0.2
  *   min/max values fix for invalid order
@@ -28,8 +32,8 @@ function motor (id, isTrailing, spawnAfterDeath) {
    this.particles = [];
    var canvas = document.getElementById(id);
    this.ctx = canvas.getContext('2d');
-   this.useTrail = isTrailing || false;
-   this.useReSpawn = spawnAfterDeath || true;
+   this.useTrail = isTrailing==null ? false : isTrailing;
+   this.useReSpawn = spawnAfterDeath==null ? true : spawnAfterDeath;
    this.pulse = {cur:0, limit: 0};
    
    // make fullscreen
@@ -38,8 +42,8 @@ function motor (id, isTrailing, spawnAfterDeath) {
    
    this.width = canvas.width;
    this.height = canvas.height;
-   
    this.lastupdate = Date.now();
+   this.boundingBox = false;
    
    this.force = {
       data: {},
@@ -51,7 +55,7 @@ function motor (id, isTrailing, spawnAfterDeath) {
             // check for function
             var val = this.data[k];
             if (typeof val === "function") {
-               val = val();
+               val = val.call(particle);
             }
             particle.props[k] += val;
          }
@@ -92,6 +96,9 @@ function motor (id, isTrailing, spawnAfterDeath) {
       }
    };
 }
+motor.prototype.setBoundingBox = function(left,top,right,bottom,bounce) {
+   this.boundingBox = {l: left, t: top, r: right, b: bottom, f: bounce};
+};
 motor.prototype.spawn = function() {
    var p = new particle();
    for(var key in p.props) {
@@ -116,7 +123,30 @@ motor.prototype.initialize = function(num, timespan) {
       this.particles.push(this.spawn());
    }
 };
-motor.prototype.outOfBounds = function(particle) {
+motor.prototype.checkBounds = function(particle) {
+   if (this.boundingBox !== false) {
+      // right
+      if (particle.props.vx > 0 && (particle.props.x + particle.props.size >= this.boundingBox.r)) {
+          particle.props.vx = -particle.props.vx * this.boundingBox.f;
+          particle.props.x += 2*(this.boundingBox.r - (particle.props.x + particle.props.size));
+      }
+      // left
+		else if ( particle.props.vx < 0 &&  (particle.props.x - particle.props.size  <= this.boundingBox.l)) {
+		   particle.props.vx = -particle.props.vx * this.boundingBox.f;
+		   particle.props.x += 2 * ( this.boundingBox.l - (particle.props.x - particle.props.size) );
+		}
+      // bottom
+      if ( particle.props.vy > 0 && (particle.props.y + particle.props.size >= this.boundingBox.b)) {
+         particle.props.vy = -particle.props.vy * this.boundingBox.f;
+         particle.props.y += 2 * ( this.boundingBox.b - (particle.props.y + particle.props.size) );
+      }
+      // top
+      else if ( particle.props.vy < 0 && (particle.props.y - particle.props.size <= this.boundingBox.t)) {
+		   particle.props.vy = -particle.props.vy * this.boundingBox.f;
+		   particle.props.y += 2 * ( this.boundingBox.t - (particle.props.y - particle.props.size) );
+		}
+   }
+   
    if (particle.props.x < 0 || particle.props.x > this.width || 
        particle.props.y < 0 || particle.props.y > this.height) {
           particle.props.dead = true;
@@ -130,6 +160,12 @@ motor.prototype.update = function() {
    } else {
       this.ctx.clearRect(0,0, this.width, this.height);
    }
+   
+   // draw number of particles
+   var label = "Particles: " + this.particles.length;
+   this.ctx.font = "10px Tahoma";
+   this.ctx.fillStyle = "#000000";
+   this.ctx.fillText(label, 20, this.height - 40);
    
    // check for pulse feature
    if (this.pulse.limit != 0) {
@@ -152,7 +188,7 @@ motor.prototype.update = function() {
          this.particles[i].move(dt);
       
          this.force.apply(this.particles[i] , dt);
-         this.outOfBounds(this.particles[i]);
+         this.checkBounds(this.particles[i]);
       } else {
          if (this.useReSpawn) {
             this.particles[i] = this.spawn();
