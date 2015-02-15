@@ -1,4 +1,4 @@
-var mo = new motor("motor", false, false);
+var mo = new motor("motor",{fullscreen:true});
 // motor:creator
 mo.creator.set("size", 2, 5);
 mo.creator.set("color_r", 50);
@@ -10,6 +10,8 @@ mo.creator.set("y", mo.height/2 - 10, mo.height/2 +10);
 mo.creator.set("vy", 0, -0.8);
 mo.creator.set("vx", 0, 0.8);
 mo.creator.set("life", 50,60);
+
+mo.event.set ("spawn", function(p) {console.info("spawn");});
 
 // mo::forces
 mo.force.set("life", -0.1);

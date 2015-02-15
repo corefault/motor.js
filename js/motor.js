@@ -15,6 +15,8 @@
  * v0.3
  *   display number of particles as text
  *   added bounding box
+ *   added options for motor constructor (fullscreen, respawn ,trail)
+ *   event system for spawn and remove
  * 
  * v0.2
  *   min/max values fix for invalid order
@@ -28,17 +30,24 @@
 /* ===================================================================================================================
  * motor
  ===================================================================================================================*/
-function motor (id, isTrailing, spawnAfterDeath) {
+function motor (id, opts) {
    this.particles = [];
+   
+   // opts might be trail, respawn, fullscreen
+   this.options = {trail: false, fullscreen: false, respawn: false};
+   if (opts.trail != null) this.options.trail = opts.trail;
+   if (opts.fullscreen != null) this.options.fullscreen = opts.fullscreen;
+   if (opts.respawn != null) this.options.respawn = opts.respawn;
+   
    var canvas = document.getElementById(id);
    this.ctx = canvas.getContext('2d');
-   this.useTrail = isTrailing==null ? false : isTrailing;
-   this.useReSpawn = spawnAfterDeath==null ? true : spawnAfterDeath;
    this.pulse = {cur:0, limit: 0};
    
    // make fullscreen
-   canvas.width = window.innerWidth;
-   canvas.height = window.innerHeight;
+   if (this.options.fullscreen) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+  }
    
    this.width = canvas.width;
    this.height = canvas.height;
@@ -70,13 +79,29 @@ function motor (id, isTrailing, spawnAfterDeath) {
       } 
    };
    
+   // event system for particle status changes
+   // possible events: spawn, remove
+   this.event = {
+       callbacks: {},
+       set: function(key, func) {
+           if (typeof func !== "function") {
+               throw new Error("the given event callback is not a function");
+           }
+           this.callbacks[key] = func;
+       },
+       apply: function(key, particle) {
+           if (this.callbacks[key]) {
+               this.callbacks[key] (particle);
+           }
+       }
+   };
+   
    this.creator = {
       data: {},
       rnd: function(min,max) {
          return (Math.random()*(max-min))+min;
       },
       make: function (min,max) {
-         
          if (min > max) {
             var tmp = min;
             min = max;
@@ -107,6 +132,7 @@ motor.prototype.spawn = function() {
            p.props[key] = val;
         }
    }
+   this.event.apply("spawn", p);
    return p;
 };
 motor.prototype.initialize = function(num, timespan) {
@@ -154,7 +180,7 @@ motor.prototype.checkBounds = function(particle) {
 };
 motor.prototype.update = function() {
    
-   if (this.useTrail) {
+   if (this.options.trail) {
       this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
       this.ctx.fillRect(0,0,this.width,this.height);
    } else {
@@ -190,8 +216,11 @@ motor.prototype.update = function() {
          this.force.apply(this.particles[i] , dt);
          this.checkBounds(this.particles[i]);
       } else {
-         if (this.useReSpawn) {
+         if (this.options.respawn) {
             this.particles[i] = this.spawn();
+         } else {
+            this.event.apply("remove", this.particles[i]);
+            this.particles.splice(i,1);// remove it finally
          }
       }
    }

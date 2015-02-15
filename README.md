@@ -1,6 +1,9 @@
 # motor.js
 simple and easy particle engine for javascript using canvas.
-inspired by my old C++ project [corengine](https://github.com/corefault/corengine)
+inspired by my old C++ project [corengine](https://github.com/corefault/corengine)  
+
+watch [demosite](http://corefault.github.io/motor.js/)  
+
 
 ## particle attributes
 

@@ -1,4 +1,4 @@
-var mo = new motor("motor", false, true);
+var mo = new motor("motor", {fullscreen:true, respawn:true});
 // motor:creator
 mo.creator.set("size", 1,2);
 mo.creator.set("color_alpha", 0.2, 0.8);
