@@ -34,8 +34,12 @@
       </style>
       <script>
           function runcode () {
+              delete window.mo;
+              
               var text = document.getElementById("code").value;
-              eval(text);
+              text = "var mo = new motor(\"motor\", {fullscreen:true});" + text;
+              text += "function draw() { mo.update(); requestAnimationFrame(draw);}draw();";
+              new Function(text)();
           }
       </script>
    </head>
@@ -44,8 +48,6 @@
       <canvas id="motor"></canvas>
       <script src="js/motor.js" type="text/javascript"></script>
       <textarea id="code" onkeydown="runcode();">
-var mo = new motor("motor", {fullscreen:true});
-
 mo.creator.set("size", 1,2);
 mo.creator.set("color_r", 50);
 mo.creator.set("color_g", 50);
@@ -66,11 +68,7 @@ mo.force.set("vx", function(){
 
 mo.initialize(40, 1);
 
-function draw() {
-  mo.update();
-  requestAnimationFrame(draw);
-}
-draw();
+
       </textarea>
       <script>runcode();</script>
    </body>
